@@ -20,8 +20,9 @@ def remove_source_tags(text):
     pattern = r'【[^】]*?†[^】]*?】'
     cleaned_text = re.sub(pattern, '', text)
     
-    # Remove any remaining brackets and their contents
-    cleaned_text = re.sub(r'\[.*?\]', '', cleaned_text)
+    # Remove any remaining square brackets and their contents, but avoid markdown links
+    cleaned_text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', cleaned_text)  # Keep markdown links
+    cleaned_text = re.sub(r'\[.*?\]', '', cleaned_text)  # Remove other brackets
     
     # Remove extra whitespace
     cleaned_text = ' '.join(cleaned_text.split())
@@ -93,7 +94,7 @@ def display_response_stream(response, message_placeholder):
     full_response = ""
     for char in response:
         full_response += char
-        message_placeholder.write(full_response)
+        message_placeholder.markdown(full_response)
         time.sleep(0.01)  # Adjust the speed as needed
 
 # Streamlit app layout
@@ -107,7 +108,7 @@ if st.session_state.messages:
                 st.write(message["content"])
         else:
             with st.chat_message("assistant"):
-                st.write(message["content"])
+                st.markdown(message["content"])
 
 # Chat input at the bottom
 user_input = st.chat_input("Type your message here...")
@@ -132,7 +133,7 @@ if user_input:
     run = wait_for_run_completion(run)
     # Get the assistant's response
     assistant_response = get_assistant_response()
-    # Remove source tags and line breaks from the response
+    # Remove source tags from the response
     assistant_response_cleaned = remove_source_tags(assistant_response)
     # Simulate streaming the assistant's response
     display_response_stream(assistant_response_cleaned, message_placeholder)
