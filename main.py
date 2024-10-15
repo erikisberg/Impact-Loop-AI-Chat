@@ -99,7 +99,7 @@ def display_response_stream(response, message_placeholder):
         time.sleep(0.01)  # Adjust the speed as needed
 
 # Streamlit app layout
-st.title("Chat with OpenAI Assistant")
+st.title("Impact Loop AI POC")
 
 # Display the conversation history using chat elements
 if st.session_state.messages:
