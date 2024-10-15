@@ -12,20 +12,19 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 client = openai.OpenAI(api_key=openai.api_key)
 
-
 # Assistant ID
-ASSISTANT_ID = "asst_tk9nMU9bDKPWmT5T7uc3L9Jq"  
+ASSISTANT_ID = "asst_tk9nMU9bDKPWmT5T7uc3L9Jq"
 
 def remove_source_tags(text):
-    # Remove source tags
-    pattern = r'【.*?†source】'
+    # Remove source references like 【...†...】
+    pattern = r'【[^】]*?†[^】]*?】'
     cleaned_text = re.sub(pattern, '', text)
     
-    # Remove any remaining square brackets and their contents
+    # Remove any remaining brackets and their contents
     cleaned_text = re.sub(r'\[.*?\]', '', cleaned_text)
     
-    # Replace line breaks with spaces
-    cleaned_text = cleaned_text.replace('\n', ' ')
+    # Remove extra whitespace
+    cleaned_text = ' '.join(cleaned_text.split())
     
     return cleaned_text
 
@@ -44,34 +43,21 @@ if st.sidebar.button("Reset Conversation"):
 def create_thread():
     thread = client.beta.threads.create()
     st.session_state.thread_id = thread.id
-    # Get the current date
-    current_date = datetime.date.today().isoformat()
-    # Send the current date as the first message
-    client.beta.threads.messages.create(
-        thread_id=st.session_state.thread_id,
-        role="user",
-        content=current_date,
-    )
-    # Append the date message to the conversation history
-    st.session_state.messages.append({"role": "user", "content": current_date})
-    # Optionally, process this message immediately
-    run = client.beta.threads.runs.create(
-        thread_id=st.session_state.thread_id,
-        assistant_id=ASSISTANT_ID,
-    )
-    wait_for_run_completion(run)
-    # Get the assistant's response to the date
-    assistant_response = get_assistant_response()
-    # Append assistant's message to session state
-    st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+    # No need to send the date here since it will be included in the first message
 
 # Function to submit a message and start a run
-def submit_message(user_message):
+def submit_message(user_message, is_first_message=False):
+    if is_first_message:
+        # Add the current date to the message sent to the assistant
+        current_date = datetime.date.today().strftime('%Y-%m-%d')
+        assistant_message = f"dagens datum är {current_date}\n{user_message}"
+    else:
+        assistant_message = user_message
     # Create a message
     client.beta.threads.messages.create(
         thread_id=st.session_state.thread_id,
         role="user",
-        content=user_message,
+        content=assistant_message,
     )
     # Start a run
     run = client.beta.threads.runs.create(
@@ -115,10 +101,7 @@ st.title("Chat with OpenAI Assistant")
 
 # Display the conversation history using chat elements
 if st.session_state.messages:
-    for i, message in enumerate(st.session_state.messages):
-        # Skip the first message if it's the date
-        if i == 0 and message["content"] == datetime.date.today().isoformat():
-            continue
+    for message in st.session_state.messages:
         if message["role"] == "user":
             with st.chat_message("user"):
                 st.write(message["content"])
@@ -132,6 +115,9 @@ user_input = st.chat_input("Type your message here...")
 if user_input:
     if not st.session_state.thread_id:
         create_thread()
+        is_first_message = True
+    else:
+        is_first_message = False
     # Append user message to session state
     st.session_state.messages.append({"role": "user", "content": user_input})
     # Display user message immediately
@@ -141,7 +127,7 @@ if user_input:
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
     # Submit the message and start a run
-    run = submit_message(user_input)
+    run = submit_message(user_input, is_first_message)
     # Wait for the run to complete
     run = wait_for_run_completion(run)
     # Get the assistant's response
