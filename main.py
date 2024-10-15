@@ -29,6 +29,7 @@ def remove_source_tags(text):
     
     return cleaned_text
 
+
 # Initialize session state
 if 'thread_id' not in st.session_state:
     st.session_state.thread_id = None
@@ -94,7 +95,7 @@ def display_response_stream(response, message_placeholder):
     full_response = ""
     for char in response:
         full_response += char
-        message_placeholder.markdown(full_response)
+        message_placeholder.write(full_response)
         time.sleep(0.01)  # Adjust the speed as needed
 
 # Streamlit app layout
@@ -133,7 +134,7 @@ if user_input:
     run = wait_for_run_completion(run)
     # Get the assistant's response
     assistant_response = get_assistant_response()
-    # Remove source tags from the response
+    # Remove source tags and line breaks from the response
     assistant_response_cleaned = remove_source_tags(assistant_response)
     # Simulate streaming the assistant's response
     display_response_stream(assistant_response_cleaned, message_placeholder)
